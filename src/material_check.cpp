@@ -1,3 +1,6 @@
+/* 
+by Anton Härfstrand, Ludwig Lenz and Theo Johansson
+*/
 #include <stdint.h>
 #include <SPI.h>
 #include <Arduino.h>
