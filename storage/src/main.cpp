@@ -2,8 +2,15 @@
 #include <SPI.h>
 #include <Arduino.h>
 #include <uHIFA.h>
+#include <MUX74HC4067.h>
+
 int8_t sequence_step=-1;
 int8_t reset_sequence_step = 0;
+
+uint8_t next_in_queue = 0;
+uint64_t InsersionTime[9];
+bool IsInserted[9];
+uint8_t mux_read_val;
 
 bool finished_delivery = false;
 bool clear_Conveyor_belt = false;
@@ -16,24 +23,12 @@ uint8_t vertical_index = 0;
 uint8_t horizontal_index = 0;
 uint8_t next_horizontal_pos;
 
-const int sensNum = 12+1;
-int A_pin[sensNum]= {_A0, _A1, _A2, _A3, _A4, _A5, _A6, _A7, _A8, _A9, _A10, _A11, _A12};
-int A_vals[sensNum]= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-const int actNum = 9+1;
-int D_pin[actNum] = {_D0, _D1, _D2, _D3, _D4, _D5, _D6, _D7, _D8, _D9};
-int D_status[actNum] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1};
 uint8_t Stop_pins[4] = {_A9, _A10, _A11, _A12};
 
+MUX74HC4067 mux(7, 8, 9, 10, 11);
 Shuttle storage_vertical(_D9, _D8);
 Conveyor storage_horizontal(_D0, _D1, _A1, _A2, _A3);
 void setup() {
-  for(int i = 0; i<sensNum; i++){
-    pinMode(A_pin[i], INPUT);
-  }
-  for(int i = 0; i<actNum; i++){
-    pinMode(D_pin[i], OUTPUT);
-  }
   storage_vertical.init();
   storage_vertical.config(CLAW, _A5, _A6, _D4, _A4, _D5);
   for(uint8_t i = 0; i<3; i++){
@@ -47,6 +42,17 @@ void setup() {
 void loop() {
   storage_horizontal.scan();
   storage_vertical.scan();
+
+  for(int i = 0; i<10; i++){
+    if(mux.read(i) and not IsInserted[i]){
+      IsInserted[i] = true;
+      InsersionTime[i] = millis();
+    }else if(not mux.read(i) and IsInserted[i]){
+      IsInserted[i] = false;
+      InsersionTime[i] = 0;
+    }
+    next_in_queue = (InsersionTime[i]>InsersionTime[i+1]) ? i:next_in_queue;
+  }
 
   if(reset_req and sequence_step==-1){
     storage_horizontal.reset();
