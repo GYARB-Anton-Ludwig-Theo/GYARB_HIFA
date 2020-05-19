@@ -35,7 +35,12 @@ void loop() {
 
   if(reseting_station){
     storageArm.move(0);
-    storageConveyor.move(MIN);
+    if(storageConveyor.get(DIRECTION_DEFAULT)){
+      storageConveyor.move(310);
+    }else{
+      storageConveyor.move(0);
+    }
+    
     if(storageArm.get(POSITION)==0&&storageConveyor.get(MIN)){
       reseting_station = false;
       next_horizontal_pos = shelfPos[horizontal_index];
